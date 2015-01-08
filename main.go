@@ -11,6 +11,14 @@ const IPStart = "192.168.178."
 const IPEnd = 200
 const Extern = "8.8.8.8"
 
+func main() {
+	fmt.Println("first try my dns server")
+	checkExtern()
+	fmt.Println("Now running fping as Go-Routines")
+	c := fanIn(fillIpArray())
+	reader(c)
+}
+
 //collecting the list of channels into one
 func fanIn(input [IPEnd]<-chan string) <-chan string {
 	c := make(chan string)
@@ -33,8 +41,10 @@ func pinger(i int) <-chan string {
 			ip).CombinedOutput()
 		res := string(out)
 		if strings.Contains(res, "alive") {
-			res = strings.Replace(res, "is alive", "\t\t", 1)
-			c <- fmt.Sprint(ip, "\t", res)
+			res = strings.Replace(res, "is alive", " ", 1)
+			split := strings.SplitN(res, " ", 3)
+			c <- fmt.Sprintf("%15s  %30s %s %s", ip,
+				split[0], split[1], split[2])
 		} else {
 			c <- fmt.Sprint("")
 		}
@@ -71,12 +81,4 @@ func fillIpArray() [IPEnd]<-chan string {
 		cs[i] = pinger(i + 1)
 	}
 	return cs
-}
-
-func main() {
-	fmt.Println("first try my dns server")
-	checkExtern()
-	fmt.Println("Now running fping as Go-Routines")
-	c := fanIn(fillIpArray())
-	reader(c)
 }
