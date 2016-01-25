@@ -1,3 +1,9 @@
+/*
+Package goping runs fping for a range of hosts simultaneously
+in order to see whether those hosts are alive and how long
+the pings are under their way.
+This is accomplished by Go Routines. A nice start into concurrency
+*/
 package main
 
 import (
@@ -7,9 +13,12 @@ import (
 	"strings"
 )
 
-const IPStart = "192.168.178."
-const IPEnd = 200
-const Extern = "8.8.8.8"
+const (
+	IPStart = "192.168.178."
+	IPEnd   = 500
+	// Extern  = "8.8.8.8"
+	Extern = "www.google.com"
+)
 
 //collecting the list of channels into one
 func fanIn(input [IPEnd]<-chan string) <-chan string {
@@ -24,7 +33,7 @@ func fanIn(input [IPEnd]<-chan string) <-chan string {
 	return c
 }
 
-//pings each ip in a go routine
+//pings each ip using a go routine
 func pinger(i int) <-chan string {
 	c := make(chan string)
 	ip := IPStart + fmt.Sprint(i)
@@ -35,8 +44,8 @@ func pinger(i int) <-chan string {
 		if strings.Contains(res, "alive") {
 			res = strings.Replace(res, "is alive", " ", 1)
 			split := strings.SplitN(res, " ", 3)
-			c <- fmt.Sprintf("%15s  %30s %s %s", ip,
-				split[0], split[1], split[2])
+			c <- fmt.Sprintf("%15s  %30s %s %s",
+				ip, split[0], split[1], split[2])
 		} else {
 			c <- fmt.Sprint("")
 		}
@@ -50,7 +59,7 @@ func reader(c <-chan string) {
 	for i := 0; i < IPEnd; i++ {
 		if res := <-c; res != "" {
 			count++
-			fmt.Printf("%02d  %s", count, res)
+			fmt.Printf("%3d  %s", count, res)
 		}
 	}
 	fmt.Println("found: ", count, "hosts")
@@ -66,7 +75,7 @@ func checkExtern() {
 	fmt.Printf("%s", s[0])
 }
 
-//generate an cannel array running the pings
+//generate a cannel array running the pings
 func fillIpArray() [IPEnd]<-chan string {
 	var cs [IPEnd]<-chan string
 	for i := 0; i < IPEnd; i++ {
@@ -76,7 +85,7 @@ func fillIpArray() [IPEnd]<-chan string {
 }
 
 func main() {
-	fmt.Println("first try my dns server")
+	fmt.Println("first pinging my dns server")
 	checkExtern()
 	fmt.Println("Now running fping as Go-Routines")
 	c := fanIn(fillIpArray())
